@@ -1,5 +1,4 @@
  import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { authUtils } from './api';
 
 // Import components
@@ -7,12 +6,6 @@ import Login from './components/Login';
 import Register from './components/Register';
 import OtpVerify from './components/OtpVerify';
 import Dashboard from './components/Dashboard';
-
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = authUtils.isAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
 
 function App() {
   const [currentView, setCurrentView] = useState('login'); // 'login', 'register', 'otp', 'dashboard'
