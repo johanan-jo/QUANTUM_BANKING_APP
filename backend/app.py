@@ -128,6 +128,9 @@ def validate_environment():
     print("✅ All required environment variables are configured")
     return True
 
+# Create Flask app instance for Gunicorn
+app = create_app()
+
 if __name__ == '__main__':
     print("🏦 Starting Quantum Banking Backend...")
     print("=" * 50)
@@ -137,12 +140,9 @@ if __name__ == '__main__':
         print("❌ Environment validation failed. Exiting.")
         exit(1)
     
-    # Create Flask app
-    app = create_app()
-    
     # Get configuration
     host = os.getenv('FLASK_HOST', '127.0.0.1')
-    port = int(os.getenv('FLASK_PORT', 5000))
+    port = int(os.getenv('PORT', os.getenv('FLASK_PORT', 5000)))
     debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     
     print(f"🚀 Server starting on http://{host}:{port}")
