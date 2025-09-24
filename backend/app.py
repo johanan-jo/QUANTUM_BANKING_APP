@@ -35,7 +35,8 @@ def create_app():
         'http://127.0.0.1:3002',
         'http://localhost:3003', 
         'http://127.0.0.1:3003',
-        'https://lil-3-l6z3mpuji-johanan-js-projects.vercel.app'
+        'https://lil-3-l6z3mpuji-johanan-js-projects.vercel.app',
+        'https://quantum-banking-api.onrender.com'
     ])
     
     # Register blueprints

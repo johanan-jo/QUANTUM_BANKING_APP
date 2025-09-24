@@ -1,8 +1,8 @@
 """
 Database connection utilities with connection pooling
 """
-import pymysql
-from pymysql import cursors
+import psycopg2
+import psycopg2.extras
 import os
 from contextlib import contextmanager
 
@@ -12,17 +12,17 @@ class DatabasePool:
     def __init__(self):
         self.config = {
             'host': os.getenv('DB_HOST', 'localhost'),
-            'user': os.getenv('DB_USER', 'root'),
+            'user': os.getenv('DB_USER', 'postgres'),
             'password': os.getenv('DB_PASS', ''),
             'database': os.getenv('DB_NAME', 'quantum_banking'),
-            'charset': 'utf8mb4',
-            'cursorclass': cursors.DictCursor,
-            'autocommit': True
+            'port': os.getenv('DB_PORT', '5432')
         }
     
     def get_connection(self):
         """Get a new database connection"""
-        return pymysql.connect(**self.config)
+        conn = psycopg2.connect(**self.config)
+        conn.autocommit = True
+        return conn
     
     @contextmanager
     def get_cursor(self):
@@ -30,7 +30,7 @@ class DatabasePool:
         connection = None
         try:
             connection = self.get_connection()
-            with connection.cursor() as cursor:
+            with connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
                 yield cursor
         except Exception as e:
             if connection:
