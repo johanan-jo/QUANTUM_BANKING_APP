@@ -34,14 +34,15 @@ def create_app():
         'http://localhost:3002', 
         'http://127.0.0.1:3002',
         'http://localhost:3003', 
-        'http://127.0.0.1:3003'
+        'http://127.0.0.1:3003',
+        'https://lil-3-l6z3mpuji-johanan-js-projects.vercel.app'
     ])
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     
-    # Health check endpoint
+    # Health check endpoints
     @app.route('/')
     def health_check():
         """API health check endpoint"""
@@ -54,7 +55,7 @@ def create_app():
     
     @app.route('/api/health')
     def api_health():
-        """Detailed API health check"""
+        """Railway health check endpoint"""
         return jsonify({
             'status': 'healthy',
             'timestamp': '2025-09-11T00:00:00Z',
