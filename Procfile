@@ -1,1 +1,1 @@
-web: cd backend && python app.py
+web: gunicorn --bind 0.0.0.0:$PORT server:app --timeout 120 --workers 1
