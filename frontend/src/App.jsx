@@ -84,7 +84,12 @@ function App() {
         );
       
       case 'dashboard':
-        return isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />;
+        return isAuthenticated ? <Dashboard /> : (
+          <Login
+            onLoginSuccess={handleLoginSuccess}
+            onSwitchToRegister={() => setCurrentView('register')}
+          />
+        );
       
       default: // 'login'
         return (
@@ -103,31 +108,6 @@ function App() {
   );
 }
 
-// Alternative Router-based App (uncomment to use React Router)
-/*
-function AppWithRouter() {
-  return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-otp" element={<OtpVerify />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
-*/
+
 
 export default App;
