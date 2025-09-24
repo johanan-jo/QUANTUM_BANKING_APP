@@ -5,37 +5,29 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "cd backend && python app.py"
-    healthCheckPath: "/api/health"
+    buildCommand: "chmod +x build.sh && ./build.sh"
+    startCommand: "chmod +x start.sh && ./start.sh"
+    healthCheckPath: "/health"
     envVars:
-      - key: DB_HOST
-        value: dpg-quantum-banking-db.oregon-postgres.render.com
-      - key: DB_USER
-        value: quantum_banking_user
-      - key: DB_PASS
-        generateValue: true
-      - key: DB_NAME
-        value: quantum_banking
-      - key: SMTP_EMAIL
-        value: QUANTUM.BANK3@GMAIL.COM
-      - key: SMTP_PASSWORD
-        value: srdl cxmf ebjf ewrq
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: JWT_SECRET
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: quantum-banking-db
+          property: connectionString
+      - key: FLASK_SECRET_KEY
         value: quantum_banking_super_secret_key_2025_production_grade_security_token_hash
+      - key: GMAIL_USER
+        value: QUANTUM.BANK3@GMAIL.COM
+      - key: GMAIL_PASS
+        value: wthj xrff xwfl gskl
       - key: PORT
-        value: "5000"
+        value: "10000"
       - key: FLASK_ENV
         value: production
 
-  - type: pserv
-    name: quantum-banking-db
-    env: postgresql
+databases:
+  - name: quantum-banking-db
+    databaseName: quantum_banking
+    user: quantum_user
     region: oregon
     plan: free
-    databaseName: quantum_banking
-    databaseUser: quantum_banking_user
