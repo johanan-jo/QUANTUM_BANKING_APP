@@ -10,17 +10,27 @@ class DatabasePool:
     """Simple database connection manager"""
     
     def __init__(self):
-        self.config = {
-            'host': os.getenv('DB_HOST', 'localhost'),
-            'user': os.getenv('DB_USER', 'postgres'),
-            'password': os.getenv('DB_PASS', ''),
-            'database': os.getenv('DB_NAME', 'quantum_banking'),
-            'port': os.getenv('DB_PORT', '5432')
-        }
+        # Check if DATABASE_URL is provided (for Render/Heroku style deployment)
+        database_url = os.getenv('DATABASE_URL')
+        if database_url:
+            self.database_url = database_url
+            self.config = None
+        else:
+            self.config = {
+                'host': os.getenv('DB_HOST', 'localhost'),
+                'user': os.getenv('DB_USER', 'postgres'),
+                'password': os.getenv('DB_PASS', ''),
+                'database': os.getenv('DB_NAME', 'quantum_banking'),
+                'port': os.getenv('DB_PORT', '5432')
+            }
+            self.database_url = None
     
     def get_connection(self):
         """Get a new database connection"""
-        conn = psycopg2.connect(**self.config)
+        if self.database_url:
+            conn = psycopg2.connect(self.database_url)
+        else:
+            conn = psycopg2.connect(**self.config)
         conn.autocommit = True
         return conn
     
