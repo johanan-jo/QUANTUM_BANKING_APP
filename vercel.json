@@ -13,7 +13,7 @@
   ],
   "build": {
     "env": {
-      "REACT_APP_API_URL": "https://quantum-banking-backend.onrender.com"
+      "REACT_APP_API_URL": "https://quantum-banking-backend.onrender.com/api"
     }
   }
 }
