@@ -87,8 +87,10 @@ def register():
         }), 201
         
     except Exception as e:
+        import traceback
         print(f"Registration error: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
