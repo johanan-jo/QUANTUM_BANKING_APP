@@ -25,21 +25,13 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'fallback-secret-key')
     app.config['JSON_SORT_KEYS'] = False
     
-    # Enable CORS for frontend communication (allow multiple ports)
-    # Add your production Vercel URL to this list after deployment
-    CORS(app, origins=[
-        'http://localhost:3000', 
-        'http://127.0.0.1:3000',
-        'http://localhost:3001', 
-        'http://127.0.0.1:3001',
-        'http://localhost:3002', 
-        'http://127.0.0.1:3002',
-        'http://localhost:3003', 
-        'http://127.0.0.1:3003',
-        'https://*.vercel.app',  # Allow all Vercel preview/production deployments
-        'https://*.railway.app',  # Allow Railway deployments
-        'https://*.onrender.com'  # Allow Render deployments
-    ])
+    # Enable CORS for frontend communication
+    CORS(app, 
+         resources={r"/api/*": {"origins": "*"}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
