@@ -17,7 +17,8 @@ A secure, production-ready banking application with quantum-inspired OTP generat
 
 ### Backend
 - **Flask** (Python) with Blueprints
-- **MySQL** database with connection pooling
+- **PostgreSQL** (Supabase) database with connection pooling
+- **psycopg2** for PostgreSQL connectivity
 - **bcrypt** for password hashing
 - **JWT** for session management
 - **SMTP** for email delivery
@@ -31,30 +32,39 @@ A secure, production-ready banking application with quantum-inspired OTP generat
 - **Responsive Design** optimized for all device sizes
 - **Real-time Form Validation** with user-friendly error messages
 
+### Deployment (FREE)
+- **Frontend**: Vercel
+- **Backend**: Railway or Render
+- **Database**: Supabase (PostgreSQL)
+
 ## 📋 Prerequisites
 
-Before running the application, ensure you have:
-
+### For Local Development
 - **Python 3.8+** installed
 - **Node.js 16+** and npm installed
-- **MySQL Server** running
+- **PostgreSQL** or Supabase account
 - **Gmail account** with App Password enabled
+
+### For Production Deployment
+- See **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** for step-by-step instructions
+- All services have FREE tiers (Vercel + Railway/Render + Supabase)
 
 ## 🚀 Quick Start Guide
 
 ### 1. Clone & Setup
 
-```bash
-# Navigate to project directory
-cd C:\Users\yuvanshankar\OneDrive\Desktop\LIL3
+```powershell
+# Clone the repository (if not already cloned)
+git clone https://github.com/johanan-jo/QUANTUM_BANKING_APP.git
+cd QUANTUM_BANKING_APP
 
 # Setup backend
 cd backend
 python -m venv venv
-venv\Scripts\activate  # On Windows
+.\venv\Scripts\Activate.ps1  # On Windows PowerShell
 pip install -r requirements.txt
 
-# Setup frontend
+# Setup frontend (in new terminal)
 cd ..\frontend
 npm install
 ```
@@ -63,7 +73,7 @@ npm install
 
 Create `backend\.env` from the example:
 
-```bash
+```powershell
 cd backend
 copy .env.example .env
 ```
@@ -71,15 +81,12 @@ copy .env.example .env
 Edit `.env` with your settings:
 
 ```env
-# Database Configuration
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=your_mysql_password
-DB_NAME=quantum_banking
+# Database Configuration (Supabase PostgreSQL)
+DATABASE_URL=postgresql://postgres:your_password@db.xxxxx.supabase.co:5432/postgres
 
 # SMTP Email Configuration (Gmail)
-SMTP_EMAIL=QUANTUM.BANK3@GMAIL.COM
-SMTP_PASSWORD=srdl cxmf ebjf ewrq
+SMTP_EMAIL=your_email@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 
@@ -88,45 +95,38 @@ JWT_SECRET=quantum_banking_super_secret_key_2025_production_grade_security_token
 
 # Development Settings
 DEBUG_OTP=true  # Set to false in production
+PORT=5000
 ```
 
 ### 3. Setup Gmail App Password
 
-✅ **Already Configured**: The application is pre-configured with working Gmail SMTP settings:
-- **Email**: QUANTUM.BANK3@GMAIL.COM
-- **App Password**: Configured and ready to use
-- **SMTP Server**: smtp.gmail.com:587
-
-> **Note**: If you need to use a different email account, follow these steps:
 1. **Enable 2FA** on your Gmail account
 2. Go to [Google Account Settings](https://myaccount.google.com/)
 3. Navigate to **Security** → **App passwords**
 4. Generate a new App Password for "Mail"
-5. Update the `.env` file with your credentials
+5. Copy the 16-character password to your `.env` file
 
-### 4. Setup Database
+### 4. Setup Database (Supabase)
 
-```bash
-# Start MySQL server (if not running)
-net start MySQL80
+**Option A: Use Supabase (Recommended for Production)**
+1. Create account at https://supabase.com
+2. Create new project
+3. Go to SQL Editor
+4. Run `backend/sql/postgres_schema.sql`
+5. Get connection string from Project Settings > Database
+6. Add to `.env` as `DATABASE_URL`
 
-# Connect to MySQL
-mysql -u root -p
+**Option B: Local PostgreSQL**
+```powershell
+# Install PostgreSQL and start service
+# Create database
+psql -U postgres -c "CREATE DATABASE quantum_banking;"
 
-# Run the schema file
-source C:/Users/yuvanshankar/OneDrive/Desktop/LIL3/backend/sql/schema.sql
+# Run schema
+psql -U postgres -d quantum_banking -f backend/sql/postgres_schema.sql
 
-# Verify setup
-USE quantum_banking;
-SHOW TABLES;
-SELECT * FROM users;
-```
-
-**Alternative Setup Script:**
-```bash
-# Use the automated database setup script
-cd C:\Users\yuvanshankar\OneDrive\Desktop\LIL3
-.\setup_database.bat
+# Set DATABASE_URL in .env
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/quantum_banking
 ```
 
 ### 5. Run the Application

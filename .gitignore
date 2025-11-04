@@ -1,27 +1,23 @@
 # Dependencies
-node_modules/
-backend/venv/
+frontend/node_modules/
 backend/__pycache__/
-backend/*.pyc
+__pycache__/
 
-# Environment variables
+# Environment
 .env
 backend/.env
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Build
+frontend/build/
+*.pyc
 
-# IDE files
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
@@ -29,17 +25,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs
-build/
-dist/
-frontend/build/
+# Testing
+coverage/
+.coverage
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Temporary files
-tmp/
-temp/
-.vercel
+# Deployment
+railway.toml
+railway.yaml
+railway.env
