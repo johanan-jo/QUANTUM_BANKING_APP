@@ -133,32 +133,27 @@ def login():
         # Generate quantum-inspired OTP
         otp_code = generate_otp(user['id'])
         
-        # Set OTP expiry (2 minutes from now)
-        expiry = datetime.now() + timedelta(minutes=2)
+        # Set OTP expiry (5 minutes from now for better UX)
+        expiry = datetime.now() + timedelta(minutes=5)
         
         # Store OTP in database
         store_otp(user['id'], otp_code, expiry)
         
-        # Send OTP via email (non-blocking, don't fail if email fails)
-        try:
-            send_otp_email(user['email'], otp_code)
-            email_status = 'sent'
-        except Exception as e:
-            print(f"Failed to send OTP email: {e}")
-            email_status = 'failed'
-        
-        # Prepare response
+        # Prepare response FIRST (don't wait for email)
         response_data = {
             'status': 'otp_sent',
             'message': 'OTP has been sent to your registered email address',
-            'expiry_minutes': 2
+            'expiry_minutes': 5
         }
         
         # Debug mode: include OTP in response (ONLY FOR DEVELOPMENT)
         if os.getenv('DEBUG_OTP', 'false').lower() == 'true':
             response_data['debug_otp'] = otp_code
             response_data['debug_notice'] = 'OTP included for debugging - remove in production'
-            response_data['email_status'] = email_status
+        
+        # Send OTP via email in background (after response is sent)
+        import threading
+        threading.Thread(target=lambda: send_otp_email(user['email'], otp_code)).start()
         
         return jsonify(response_data), 200
         
