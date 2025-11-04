@@ -2,10 +2,7 @@
  * API utilities for communicating with the backend
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://quantum-banking-api.onrender.com/api' 
-    : 'http://localhost:5000/api');
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 /**
  * HTTP client wrapper with error handling

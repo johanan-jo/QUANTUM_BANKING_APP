@@ -13,7 +13,14 @@ import os
 # Load environment variables
 load_dotenv()
 
-# Import blueprints
+# Import blueprints from backend directory
+import sys
+from pathlib import Path
+
+# Add backend directory to Python path
+backend_dir = Path(__file__).parent / 'backend'
+sys.path.insert(0, str(backend_dir))
+
 from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
 
@@ -45,7 +52,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
     
-    # Health check endpoint
+    # Health check endpoints
     @app.route('/')
     def health_check():
         """API health check endpoint"""
@@ -58,7 +65,7 @@ def create_app():
     
     @app.route('/api/health')
     def api_health():
-        """Detailed API health check"""
+        """Railway health check endpoint"""
         return jsonify({
             'status': 'healthy',
             'timestamp': '2025-09-11T00:00:00Z',
@@ -109,35 +116,29 @@ def create_app():
 
 def validate_environment():
     """Validate required environment variables"""
-    # Check for DATABASE_URL (Supabase/Railway/Render) or individual DB params
-    has_database_url = os.getenv('DATABASE_URL')
-    has_db_params = all([
-        os.getenv('DB_HOST'),
-        os.getenv('DB_USER'),
-        os.getenv('DB_PASS'),
-        os.getenv('DB_NAME')
-    ])
+    required_vars = [
+        'DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME',
+        'SMTP_EMAIL', 'SMTP_PASSWORD', 'JWT_SECRET'
+    ]
     
-    if not has_database_url and not has_db_params:
-        print("❌ Missing database configuration!")
-        print("   Either set DATABASE_URL or all of: DB_HOST, DB_USER, DB_PASS, DB_NAME")
-        return False
-    
-    # Check other required vars
-    required_vars = ['SMTP_EMAIL', 'SMTP_PASSWORD', 'JWT_SECRET']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    missing_vars = []
+    for var in required_vars:
+        if not os.getenv(var):
+            missing_vars.append(var)
     
     if missing_vars:
         print("❌ Missing required environment variables:")
         for var in missing_vars:
             print(f"   - {var}")
         print("\n📝 Please check your .env file and ensure all variables are set.")
+        print("   Refer to .env.example for the required format.")
         return False
     
     print("✅ All required environment variables are configured")
-    if has_database_url:
-        print("✅ Using DATABASE_URL for database connection")
     return True
+
+# Create Flask app instance for Gunicorn
+app = create_app()
 
 if __name__ == '__main__':
     print("🏦 Starting Quantum Banking Backend...")
@@ -148,12 +149,9 @@ if __name__ == '__main__':
         print("❌ Environment validation failed. Exiting.")
         exit(1)
     
-    # Create Flask app
-    app = create_app()
-    
     # Get configuration
     host = os.getenv('FLASK_HOST', '127.0.0.1')
-    port = int(os.getenv('FLASK_PORT', 5000))
+    port = int(os.getenv('PORT', os.getenv('FLASK_PORT', 5000)))
     debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     
     print(f"🚀 Server starting on http://{host}:{port}")

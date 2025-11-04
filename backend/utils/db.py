@@ -1,38 +1,66 @@
 """
-Database connection utilities with connection pooling
+Database connection utilities with connection pooling (Supabase/PostgreSQL)
 """
 import psycopg2
-import psycopg2.extras
+from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 import os
 from contextlib import contextmanager
 
 class DatabasePool:
-    """Simple database connection manager"""
+    """Simple database connection manager for PostgreSQL/Supabase"""
     
     def __init__(self):
-        # Check if DATABASE_URL is provided (for Render/Heroku style deployment)
-        database_url = os.getenv('DATABASE_URL')
-        if database_url:
-            self.database_url = database_url
-            self.config = None
+        # Support both DATABASE_URL (standard Postgres) and individual params
+        self.database_url = os.getenv('DATABASE_URL')
+        
+        if self.database_url:
+            # Use DATABASE_URL if provided (Supabase, Railway, etc.)
+            self.connection_string = self.database_url
         else:
-            self.config = {
-                'host': os.getenv('DB_HOST', 'localhost'),
-                'user': os.getenv('DB_USER', 'postgres'),
-                'password': os.getenv('DB_PASS', ''),
-                'database': os.getenv('DB_NAME', 'quantum_banking'),
-                'port': os.getenv('DB_PORT', '5432')
-            }
-            self.database_url = None
+            # Fallback to individual parameters
+            host = os.getenv('DB_HOST', 'localhost')
+            user = os.getenv('DB_USER', 'postgres')
+            password = os.getenv('DB_PASS', '')
+            database = os.getenv('DB_NAME', 'quantum_banking')
+            port = os.getenv('DB_PORT', '5432')
+            
+            self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+        
+        # Initialize connection pool for better performance
+        try:
+            self.connection_pool = pool.SimpleConnectionPool(
+                1,  # min connections
+                10,  # max connections
+                self.connection_string
+            )
+        except Exception as e:
+            print(f"Warning: Could not create connection pool: {e}")
+            self.connection_pool = None
     
     def get_connection(self):
-        """Get a new database connection"""
-        if self.database_url:
-            conn = psycopg2.connect(self.database_url)
-        else:
-            conn = psycopg2.connect(**self.config)
-        conn.autocommit = True
-        return conn
+        """Get a connection from the pool or create a new one"""
+        if self.connection_pool:
+            try:
+                return self.connection_pool.getconn()
+            except Exception:
+                pass
+        
+        # Fallback to direct connection
+        return psycopg2.connect(self.connection_string)
+    
+    def return_connection(self, connection):
+        """Return connection to the pool"""
+        if self.connection_pool and connection:
+            try:
+                self.connection_pool.putconn(connection)
+                return
+            except Exception:
+                pass
+        
+        # Fallback: close the connection
+        if connection:
+            connection.close()
     
     @contextmanager
     def get_cursor(self):
@@ -40,15 +68,19 @@ class DatabasePool:
         connection = None
         try:
             connection = self.get_connection()
-            with connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+            connection.autocommit = True
+            with connection.cursor(cursor_factory=RealDictCursor) as cursor:
                 yield cursor
         except Exception as e:
             if connection:
-                connection.rollback()
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
             raise e
         finally:
             if connection:
-                connection.close()
+                self.return_connection(connection)
 
 # Global database pool instance
 db_pool = DatabasePool()
@@ -120,7 +152,7 @@ def count_recent_otps(user_id, hours=1):
     """Count recent OTPs for rate limiting"""
     query = """
     SELECT COUNT(*) as count FROM otps 
-    WHERE user_id = %s AND created_at > DATE_SUB(NOW(), INTERVAL %s HOUR)
+    WHERE user_id = %s AND created_at > NOW() - INTERVAL '%s hours'
     """
     result = execute_query(query, (user_id, hours), fetch_one=True)
     return result['count'] if result else 0
