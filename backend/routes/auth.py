@@ -139,10 +139,13 @@ def login():
         # Store OTP in database
         store_otp(user['id'], otp_code, expiry)
         
-        # Send OTP via email
-        email_sent = send_otp_email(user['email'], otp_code)
-        if not email_sent:
-            return jsonify({'error': 'Failed to send OTP email. Please try again.'}), 500
+        # Send OTP via email (non-blocking, don't fail if email fails)
+        try:
+            send_otp_email(user['email'], otp_code)
+            email_status = 'sent'
+        except Exception as e:
+            print(f"Failed to send OTP email: {e}")
+            email_status = 'failed'
         
         # Prepare response
         response_data = {
@@ -155,6 +158,7 @@ def login():
         if os.getenv('DEBUG_OTP', 'false').lower() == 'true':
             response_data['debug_otp'] = otp_code
             response_data['debug_notice'] = 'OTP included for debugging - remove in production'
+            response_data['email_status'] = email_status
         
         return jsonify(response_data), 200
         
