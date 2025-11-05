@@ -24,6 +24,9 @@ def send_otp_email(to_email, otp):
         smtp_email = os.getenv('SMTP_EMAIL')
         smtp_password = os.getenv('SMTP_PASSWORD')
         
+        print(f"📧 Email Config - Server: {smtp_server}, Port: {smtp_port}, From: {smtp_email}")
+        print(f"📧 Password length: {len(smtp_password) if smtp_password else 0} chars")
+        
         if not smtp_email or not smtp_password:
             print("❌ SMTP credentials not configured in .env file")
             return False
@@ -94,16 +97,22 @@ def send_otp_email(to_email, otp):
         message.attach(html_part)
         
         # Send email
+        print(f"📧 Connecting to SMTP server {smtp_server}:{smtp_port}...")
         with smtplib.SMTP(smtp_server, smtp_port) as server:
+            print(f"📧 Starting TLS encryption...")
             server.starttls()
+            print(f"📧 Logging in as {smtp_email}...")
             server.login(smtp_email, smtp_password)
+            print(f"📧 Sending email to {to_email}...")
             server.send_message(message)
         
-        print(f"OTP email sent successfully to {to_email}")
+        print(f"✅ OTP email sent successfully to {to_email}")
         return True
         
     except Exception as e:
-        print(f"Failed to send OTP email: {str(e)}")
+        import traceback
+        print(f"❌ Failed to send OTP email: {str(e)}")
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         return False
 
 def send_welcome_email(to_email, name, account_number):
