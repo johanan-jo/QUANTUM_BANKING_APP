@@ -77,9 +77,16 @@ def register():
         
         # Send welcome email (optional, doesn't affect registration success)
         try:
-            send_welcome_email(email, name, account_number)
+            print(f"📧 Sending welcome email to {email}...")
+            result = send_welcome_email(email, name, account_number)
+            if result:
+                print(f"✅ Welcome email sent successfully to {email}")
+            else:
+                print(f"⚠️ Welcome email function returned False for {email}")
         except Exception as e:
-            print(f"Failed to send welcome email: {e}")
+            import traceback
+            print(f"❌ Failed to send welcome email: {e}")
+            print(f"❌ Traceback: {traceback.format_exc()}")
         
         return jsonify({
             'message': 'Account created successfully',
@@ -153,7 +160,20 @@ def login():
         
         # Send OTP via email in background (after response is sent)
         import threading
-        threading.Thread(target=lambda: send_otp_email(user['email'], otp_code)).start()
+        def send_email_wrapper():
+            try:
+                print(f"🔄 Background thread started for sending OTP to {user['email']}")
+                result = send_otp_email(user['email'], otp_code)
+                if result:
+                    print(f"✅ Background email thread completed successfully")
+                else:
+                    print(f"⚠️ Background email thread completed but email sending returned False")
+            except Exception as e:
+                import traceback
+                print(f"❌ Background email thread error: {str(e)}")
+                print(f"❌ Traceback: {traceback.format_exc()}")
+        
+        threading.Thread(target=send_email_wrapper).start()
         
         return jsonify(response_data), 200
         
