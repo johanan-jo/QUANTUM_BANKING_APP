@@ -98,7 +98,7 @@ def send_otp_email(to_email, otp):
         
         # Send email
         print(f"📧 Connecting to SMTP server {smtp_server}:{smtp_port}...")
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
             print(f"📧 Starting TLS encryption...")
             server.starttls()
             print(f"📧 Logging in as {smtp_email}...")
@@ -179,7 +179,7 @@ def send_welcome_email(to_email, name, account_number):
         html_part = MIMEText(html_content, "html")
         message.attach(html_part)
         
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
             server.starttls()
             server.login(smtp_email, smtp_password)
             server.send_message(message)
