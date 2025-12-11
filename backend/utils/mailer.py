@@ -23,9 +23,8 @@ def send_otp_email(to_email, otp):
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         smtp_email = os.getenv('SMTP_EMAIL')
         smtp_password = os.getenv('SMTP_PASSWORD')
-        from_email = os.getenv('FROM_EMAIL', smtp_email)  # Use FROM_EMAIL if available
         
-        print(f"📧 Email Config - Server: {smtp_server}, Port: {smtp_port}, From: {from_email}")
+        print(f"📧 Email Config - Server: {smtp_server}, Port: {smtp_port}, From: {smtp_email}")
         print(f"📧 Password length: {len(smtp_password) if smtp_password else 0} chars")
         
         if not smtp_email or not smtp_password:
@@ -35,7 +34,7 @@ def send_otp_email(to_email, otp):
         # Create message
         message = MIMEMultipart("alternative")
         message["Subject"] = "Quantum Banking - Login OTP"
-        message["From"] = from_email
+        message["From"] = smtp_email
         message["To"] = to_email
         
         # Create HTML content
@@ -99,7 +98,7 @@ def send_otp_email(to_email, otp):
         
         # Send email
         print(f"📧 Connecting to SMTP server {smtp_server}:{smtp_port}...")
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
             print(f"📧 Starting TLS encryption...")
             server.starttls()
             print(f"📧 Logging in as {smtp_email}...")
@@ -134,14 +133,13 @@ def send_welcome_email(to_email, name, account_number):
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         smtp_email = os.getenv('SMTP_EMAIL')
         smtp_password = os.getenv('SMTP_PASSWORD')
-        from_email = os.getenv('FROM_EMAIL', smtp_email)
         
         if not smtp_email or not smtp_password:
             return False
         
         message = MIMEMultipart("alternative")
         message["Subject"] = "Welcome to Quantum Banking!"
-        message["From"] = from_email
+        message["From"] = smtp_email
         message["To"] = to_email
         
         html_content = f"""
@@ -182,7 +180,7 @@ def send_welcome_email(to_email, name, account_number):
         html_part = MIMEText(html_content, "html")
         message.attach(html_part)
         
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_email, smtp_password)
             server.send_message(message)
