@@ -23,8 +23,9 @@ def send_otp_email(to_email, otp):
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         smtp_email = os.getenv('SMTP_EMAIL')
         smtp_password = os.getenv('SMTP_PASSWORD')
+        from_email = os.getenv('FROM_EMAIL', smtp_email)  # Use FROM_EMAIL if available
         
-        print(f"📧 Email Config - Server: {smtp_server}, Port: {smtp_port}, From: {smtp_email}")
+        print(f"📧 Email Config - Server: {smtp_server}, Port: {smtp_port}, From: {from_email}")
         print(f"📧 Password length: {len(smtp_password) if smtp_password else 0} chars")
         
         if not smtp_email or not smtp_password:
@@ -34,7 +35,7 @@ def send_otp_email(to_email, otp):
         # Create message
         message = MIMEMultipart("alternative")
         message["Subject"] = "Quantum Banking - Login OTP"
-        message["From"] = smtp_email
+        message["From"] = from_email
         message["To"] = to_email
         
         # Create HTML content
@@ -128,17 +129,19 @@ def send_welcome_email(to_email, name, account_number):
         bool: True if email sent successfully, False otherwise
     """
     try:
-        smtp_server = "smtp.gmail.com"
-        smtp_port = 587
+        # Use same SMTP configuration as OTP email
+        smtp_server = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', '587'))
         smtp_email = os.getenv('SMTP_EMAIL')
         smtp_password = os.getenv('SMTP_PASSWORD')
+        from_email = os.getenv('FROM_EMAIL', smtp_email)
         
         if not smtp_email or not smtp_password:
             return False
         
         message = MIMEMultipart("alternative")
         message["Subject"] = "Welcome to Quantum Banking!"
-        message["From"] = smtp_email
+        message["From"] = from_email
         message["To"] = to_email
         
         html_content = f"""
