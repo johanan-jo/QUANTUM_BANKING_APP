@@ -11,9 +11,6 @@ so the app can send via the Gmail REST API (avoids outbound SMTP blocking).
 import os
 import base64
 from email.message import EmailMessage
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
 
 
 def send_email_via_gmail_api(to_email: str, subject: str, html_body: str, plain_body: str = None):
@@ -27,6 +24,15 @@ def send_email_via_gmail_api(to_email: str, subject: str, html_body: str, plain_
 
     Returns the API response on success.
     """
+    try:
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+        from googleapiclient.discovery import build
+    except ImportError:
+        raise RuntimeError(
+            "Google client libraries not installed. Run: pip install google-auth google-auth-oauthlib google-api-python-client"
+        )
+    
     client_id = os.environ.get("GOOGLE_CLIENT_ID")
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
     refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN")
