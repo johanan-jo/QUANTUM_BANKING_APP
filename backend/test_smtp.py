@@ -10,14 +10,16 @@ SMTP_EMAIL = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_EMAIL)
 
 print(f"Testing SMTP with: {SMTP_EMAIL}")
+print(f"From email: {FROM_EMAIL}")
 print(f"Password length: {len(SMTP_PASSWORD)} chars")
 print(f"Password: {SMTP_PASSWORD[:4]}...{SMTP_PASSWORD[-4:]}")
 
 msg = EmailMessage()
 msg["Subject"] = "SMTP Test - Quantum Banking"
-msg["From"] = SMTP_EMAIL
+msg["From"] = FROM_EMAIL
 msg["To"] = "quantumbankapp@gmail.com"  # Test sending to self
 msg.set_content("This is an SMTP test from your Quantum Banking app!")
 
