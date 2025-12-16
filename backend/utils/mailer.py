@@ -1,75 +1,55 @@
-"""Gmail API mailer utilities for sending OTP and welcome emails.
+"""SendGrid mailer wrapper.
 
-This module exposes:
-- send_email_via_gmail_api(to_email, subject, html_body, plain_body=None)
-- send_otp_email(to_email, otp)
-- send_welcome_email(to_email, name, account_number)
+This module sends transactional emails via SendGrid API.
 
-It uses a stored OAuth2 refresh token to obtain short-lived access tokens
-so the app can send via the Gmail REST API (avoids outbound SMTP blocking).
+Environment variables required:
+- SENDGRID_API_KEY: SendGrid API key
+- FROM_EMAIL: sender email address (must be verified in SendGrid)
+
+Local test script `backend/test_sendgrid.py` can be used to validate.
 """
 import os
-import base64
-from email.message import EmailMessage
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from typing import Optional
+
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+FROM_EMAIL = os.getenv("FROM_EMAIL")
 
 
-def send_email_via_gmail_api(to_email: str, subject: str, html_body: str, plain_body: str = None):
-    """Send an email via Gmail API using OAuth2 refresh token.
+class SendGridError(Exception):
+    pass
 
-    Required env vars:
-      - GOOGLE_CLIENT_ID
-      - GOOGLE_CLIENT_SECRET
-      - GOOGLE_REFRESH_TOKEN
-      - FROM_EMAIL
 
-    Returns the API response on success.
+def send_email_via_sendgrid(to_email: str, subject: str, html_body: str, plain_body: Optional[str] = None, from_email: Optional[str] = None):
+    """Send an email using SendGrid API.
+
+    Returns status code and response body on success; raises SendGridError on failure.
     """
+    api_key = SENDGRID_API_KEY or os.getenv("SENDGRID_API_KEY")
+    sender = from_email or FROM_EMAIL or os.getenv("FROM_EMAIL")
+
+    if not api_key:
+        raise SendGridError("SendGrid configuration missing: SENDGRID_API_KEY must be set")
+    if not sender:
+        raise SendGridError("FROM_EMAIL must be set in environment variables")
+
     try:
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
-    except ImportError:
-        raise RuntimeError(
-            "Google client libraries not installed. Run: pip install google-auth google-auth-oauthlib google-api-python-client"
+        message = Mail(
+            from_email=sender,
+            to_emails=to_email,
+            subject=subject,
+            html_content=html_body,
+            plain_text_content=plain_body or ""
         )
-    
-    client_id = os.environ.get("GOOGLE_CLIENT_ID")
-    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
-    refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN")
-    from_email = os.environ.get("FROM_EMAIL")
-
-    if not (client_id and client_secret and refresh_token and from_email):
-        raise RuntimeError(
-            "Missing Google OAuth env vars (GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN/FROM_EMAIL)"
-        )
-
-    creds = Credentials(
-        token=None,
-        refresh_token=refresh_token,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=client_id,
-        client_secret=client_secret,
-    )
-    # Exchange refresh token for an access token
-    creds.refresh(Request())
-
-    msg = EmailMessage()
-    msg["From"] = from_email
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    if plain_body:
-        msg.set_content(plain_body)
-    msg.add_alternative(html_body, subtype="html")
-
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    service = build("gmail", "v1", credentials=creds)
-    message = {"raw": raw}
-    sent = service.users().messages().send(userId="me", body=message).execute()
-    return sent
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        return response.status_code, response.body, response.headers
+    except Exception as e:
+        raise SendGridError(f"SendGrid API error: {e}")
 
 
 def send_otp_email(to_email: str, otp: str):
-    """Compose and send OTP email."""
     subject = "Quantum Banking - Login OTP"
     html_content = f"""
 <html>
@@ -103,11 +83,11 @@ This OTP will expire in 2 minutes.
 If you didn't request this OTP, please ignore this email.
 """
 
-    return send_email_via_gmail_api(to_email, subject, html_content, plain_body=text_content)
+    status, body, headers = send_email_via_sendgrid(to_email, subject, html_content, plain_body=text_content)
+    return status, body
 
 
 def send_welcome_email(to_email: str, name: str, account_number: str):
-    """Compose and send welcome email."""
     subject = "Welcome to Quantum Banking!"
     html_content = f"""
 <html>
@@ -132,4 +112,6 @@ def send_welcome_email(to_email: str, name: str, account_number: str):
 </html>
 """
 
-    return send_email_via_gmail_api(to_email, subject, html_content)
+    status, body, headers = send_email_via_sendgrid(to_email, subject, html_content)
+    return status, body
+
