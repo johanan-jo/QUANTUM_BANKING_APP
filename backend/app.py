@@ -9,9 +9,18 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+import logging
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("quantum_banking.app")
 
 # Import blueprints
 from routes.auth import auth_bp
@@ -50,13 +59,39 @@ def create_app():
     
     @app.route('/api/health')
     def api_health():
-        """Detailed API health check"""
+        """Detailed API health check with dynamic service inspection"""
+        client_id = os.getenv('GMAIL_CLIENT_ID') or os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = os.getenv('GMAIL_CLIENT_SECRET') or os.getenv('GOOGLE_CLIENT_SECRET')
+        refresh_token = os.getenv('GMAIL_REFRESH_TOKEN') or os.getenv('GOOGLE_REFRESH_TOKEN')
+        sender_email = (
+            os.getenv('GMAIL_SENDER_EMAIL')
+            or os.getenv('FROM_EMAIL')
+            or os.getenv('SMTP_EMAIL')
+        )
+
+        missing_email_vars = []
+        if not client_id:
+            missing_email_vars.append('GMAIL_CLIENT_ID')
+        if not client_secret:
+            missing_email_vars.append('GMAIL_CLIENT_SECRET')
+        if not refresh_token:
+            missing_email_vars.append('GMAIL_REFRESH_TOKEN')
+        if not sender_email:
+            missing_email_vars.append('GMAIL_SENDER_EMAIL')
+
+        email_status = "configured" if not missing_email_vars else "missing_credentials"
+
         return jsonify({
-            'status': 'healthy',
-            'timestamp': '2025-09-11T00:00:00Z',
+            'status': 'healthy' if not missing_email_vars else 'degraded',
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
             'services': {
                 'database': 'connected',
-                'email': 'configured',
+                'email': {
+                    'provider': 'Gmail API (OAuth 2.0)',
+                    'status': email_status,
+                    'missing_variables': missing_email_vars,
+                    'sender_configured': bool(sender_email)
+                },
                 'quantum_otp': 'active',
                 'authentication': 'ready'
             },
@@ -89,80 +124,24 @@ def create_app():
     @app.errorhandler(500)
     def internal_error(error):
         """Handle 500 errors"""
+        logger.error(f"Internal server error: {error}")
         return jsonify({'error': 'Internal server error'}), 500
-    
-    @app.before_request
-    def log_request():
-        """Log incoming requests for debugging"""
-        if os.getenv('DEBUG_OTP', 'false').lower() == 'true':
-            print(f"[API] {request.method} {request.path}")
     
     return app
 
-def validate_environment():
-    """Validate required environment variables"""
-    # Check for DATABASE_URL (Supabase/Railway/Render) or individual DB params
-    has_database_url = os.getenv('DATABASE_URL')
-    has_db_params = all([
-        os.getenv('DB_HOST'),
-        os.getenv('DB_USER'),
-        os.getenv('DB_PASS'),
-        os.getenv('DB_NAME')
-    ])
-    
-    if not has_database_url and not has_db_params:
-        print("❌ Missing database configuration!")
-        print("   Either set DATABASE_URL or all of: DB_HOST, DB_USER, DB_PASS, DB_NAME")
-        return False
-    
-    # Check other required vars
-    required_vars = ['SMTP_EMAIL', 'SMTP_PASSWORD', 'JWT_SECRET']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
-    if missing_vars:
-        print("❌ Missing required environment variables:")
-        for var in missing_vars:
-            print(f"   - {var}")
-        print("\n📝 Please check your .env file and ensure all variables are set.")
-        return False
-    
-    print("✅ All required environment variables are configured")
-    if has_database_url:
-        print("✅ Using DATABASE_URL for database connection")
-    return True
+# Application instance for WSGI servers
+app = create_app()
 
 if __name__ == '__main__':
-    print("🏦 Starting Quantum Banking Backend...")
-    print("=" * 50)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV', 'development') == 'development'
     
-    # Validate environment
-    if not validate_environment():
-        print("❌ Environment validation failed. Exiting.")
-        exit(1)
+    print("=" * 60)
+    print("🏦 Quantum Banking Backend Server")
+    print("=" * 60)
+    print(f"Server starting on port: {port}")
+    print(f"Debug mode: {debug}")
+    print(f"API endpoints available at: http://localhost:{port}/api")
+    print("=" * 60)
     
-    # Create Flask app
-    app = create_app()
-    
-    # Get configuration
-    host = os.getenv('FLASK_HOST', '127.0.0.1')
-    port = int(os.getenv('FLASK_PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
-    
-    print(f"🚀 Server starting on http://{host}:{port}")
-    print(f"🔧 Debug mode: {'ON' if debug else 'OFF'}")
-    print(f"🔐 JWT Secret: {'Configured' if os.getenv('JWT_SECRET') else 'Missing'}")
-    print(f"📧 SMTP: {'Configured' if os.getenv('SMTP_EMAIL') else 'Missing'}")
-    print(f"🗄️  Database: {os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_NAME', 'quantum_banking')}")
-    print("=" * 50)
-    
-    try:
-        app.run(
-            host=host,
-            port=port,
-            debug=debug,
-            threaded=True
-        )
-    except KeyboardInterrupt:
-        print("\n👋 Server stopped by user")
-    except Exception as e:
-        print(f"❌ Server error: {e}")
+    app.run(host='0.0.0.0', port=port, debug=debug)

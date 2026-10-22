@@ -81,14 +81,14 @@ def register():
         # Send welcome email (optional, doesn't affect registration success)
         try:
             masked = _mask_email(email)
-            print(f"[INFO] Sending welcome email to {masked}...")
+            print(f"[INFO] Sending welcome email to {masked}...", flush=True)
             result = send_welcome_email(email, name, account_number)
             if result:
-                print(f"[SUCCESS] Welcome email sent successfully to {masked}")
+                print(f"[SUCCESS] Welcome email sent successfully to {masked}", flush=True)
             else:
-                print(f"[WARN] Welcome email function returned False for {masked}")
+                print(f"[WARN] Welcome email function returned False for {masked}", flush=True)
         except Exception as e:
-            print(f"[ERROR] Failed to send welcome email: {e}")
+            print(f"[ERROR] Failed to send welcome email: {e}", flush=True)
         
         return jsonify({
             'message': 'Account created successfully',
@@ -97,8 +97,8 @@ def register():
         
     except Exception as e:
         import traceback
-        print(f"Registration error: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+        print(f"Registration error: {e}", flush=True)
+        print(f"Traceback: {traceback.format_exc()}", flush=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
@@ -148,7 +148,19 @@ def login():
         # Store OTP in database
         store_otp(user['id'], otp_code, expiry)
         
-        # Prepare response FIRST (don't wait for email)
+        # Send OTP via Gmail API (synchronous to verify delivery success)
+        masked_email = _mask_email(user['email'])
+        print(f"[INFO] Dispatching OTP via Gmail API to {masked_email}...", flush=True)
+        email_sent = send_otp_email(user['email'], otp_code)
+        
+        if not email_sent:
+            print(f"[ERROR] Failed to send OTP email to {masked_email}. Check Gmail API environment variables in Render.", flush=True)
+            return jsonify({
+                'error': 'Failed to send OTP email. Please ensure your Gmail API credentials are set on Render and try again.'
+            }), 500
+        
+        print(f"[SUCCESS] OTP successfully delivered to {masked_email}", flush=True)
+
         response_data = {
             'status': 'otp_sent',
             'message': 'OTP has been sent to your registered email address',
@@ -160,26 +172,10 @@ def login():
             response_data['debug_otp'] = otp_code
             response_data['debug_notice'] = 'OTP included for debugging - remove in production'
         
-        # Send OTP via email in background (after response is sent)
-        import threading
-        def send_email_wrapper():
-            try:
-                masked = _mask_email(user['email'])
-                print(f"[INFO] Background thread started for sending OTP to {masked}")
-                result = send_otp_email(user['email'], otp_code)
-                if result:
-                    print(f"[SUCCESS] Background email thread completed successfully for {masked}")
-                else:
-                    print(f"[WARN] Background email thread completed but email sending returned False for {masked}")
-            except Exception as e:
-                print(f"[ERROR] Background email thread error: {str(e)}")
-        
-        threading.Thread(target=send_email_wrapper).start()
-        
         return jsonify(response_data), 200
         
     except Exception as e:
-        print(f"Login error: {e}")
+        print(f"Login error: {e}", flush=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 @auth_bp.route('/verify-otp', methods=['POST'])
@@ -239,7 +235,7 @@ def verify_otp():
         }), 200
         
     except Exception as e:
-        print(f"OTP verification error: {e}")
+        print(f"OTP verification error: {e}", flush=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 @auth_bp.route('/resend-otp', methods=['POST'])
@@ -283,8 +279,11 @@ def resend_otp():
         store_otp(user['id'], otp_code, expiry)
         
         # Send OTP via email
+        masked_email = _mask_email(user['email'])
+        print(f"[INFO] Resending OTP via Gmail API to {masked_email}...", flush=True)
         email_sent = send_otp_email(user['email'], otp_code)
         if not email_sent:
+            print(f"[ERROR] Failed to resend OTP email to {masked_email}", flush=True)
             return jsonify({'error': 'Failed to send OTP email. Please try again.'}), 500
         
         # Prepare response
@@ -300,5 +299,5 @@ def resend_otp():
         return jsonify(response_data), 200
         
     except Exception as e:
-        print(f"Resend OTP error: {e}")
+        print(f"Resend OTP error: {e}", flush=True)
         return jsonify({'error': 'Internal server error'}), 500

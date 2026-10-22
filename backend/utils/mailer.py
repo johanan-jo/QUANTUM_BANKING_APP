@@ -9,6 +9,7 @@ function signatures, HTML styling, and error handling contracts.
 """
 
 import os
+import sys
 import logging
 from typing import Optional, Dict, Any, Tuple
 from utils.gmail_service import (
@@ -65,21 +66,25 @@ If you didn't request this OTP, please ignore this email and ensure your account
 """
 
     try:
-        # Note: We do NOT log the actual OTP value for security
-        logger.info("Attempting OTP dispatch to %s via Gmail API", _mask_email(to_email))
+        masked_to = _mask_email(to_email)
+        logger.info("Attempting OTP dispatch to %s via Gmail API", masked_to)
         send_email_via_gmail(
             to_email=to_email,
             subject=subject,
             html_body=html_content,
             plain_body=text_content
         )
-        logger.info("OTP successfully sent to %s", _mask_email(to_email))
+        logger.info("OTP successfully sent to %s", masked_to)
         return True
     except GmailServiceError as gse:
-        logger.error("Gmail API delivery failed for %s: %s", _mask_email(to_email), str(gse))
+        masked_to = _mask_email(to_email)
+        logger.error("Gmail API delivery failed for %s: %s", masked_to, str(gse))
+        print(f"[ERROR] Gmail API delivery failed for {masked_to}: {str(gse)}", file=sys.stderr, flush=True)
         return False
     except Exception as e:
-        logger.error("Unexpected error delivering OTP to %s: %s", _mask_email(to_email), str(e))
+        masked_to = _mask_email(to_email)
+        logger.error("Unexpected error delivering OTP to %s: %s", masked_to, str(e))
+        print(f"[ERROR] Unexpected error delivering OTP to {masked_to}: {str(e)}", file=sys.stderr, flush=True)
         return False
 
 
@@ -132,20 +137,25 @@ You can now log in using your account number and password. For security, you wil
 """
 
     try:
-        logger.info("Attempting welcome email dispatch to %s via Gmail API", _mask_email(to_email))
+        masked_to = _mask_email(to_email)
+        logger.info("Attempting welcome email dispatch to %s via Gmail API", masked_to)
         send_email_via_gmail(
             to_email=to_email,
             subject=subject,
             html_body=html_content,
             plain_body=text_content
         )
-        logger.info("Welcome email successfully sent to %s", _mask_email(to_email))
+        logger.info("Welcome email successfully sent to %s", masked_to)
         return True
     except GmailServiceError as gse:
-        logger.error("Gmail API delivery failed for welcome email to %s: %s", _mask_email(to_email), str(gse))
+        masked_to = _mask_email(to_email)
+        logger.error("Gmail API delivery failed for welcome email to %s: %s", masked_to, str(gse))
+        print(f"[ERROR] Gmail API delivery failed for welcome email to {masked_to}: {str(gse)}", file=sys.stderr, flush=True)
         return False
     except Exception as e:
-        logger.error("Unexpected error delivering welcome email to %s: %s", _mask_email(to_email), str(e))
+        masked_to = _mask_email(to_email)
+        logger.error("Unexpected error delivering welcome email to %s: %s", masked_to, str(e))
+        print(f"[ERROR] Unexpected error delivering welcome email to {masked_to}: {str(e)}", file=sys.stderr, flush=True)
         return False
 
 

@@ -19,6 +19,8 @@ services:
         sync: false
       - key: GMAIL_SENDER_EMAIL
         sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
       - key: DEBUG_OTP
         value: false
       - key: FLASK_ENV
