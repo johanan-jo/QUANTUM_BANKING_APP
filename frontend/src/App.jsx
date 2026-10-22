@@ -1,5 +1,5 @@
- import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { authUtils } from './api';
 
 // Import components
@@ -8,16 +8,9 @@ import Register from './components/Register';
 import OtpVerify from './components/OtpVerify';
 import Dashboard from './components/Dashboard';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = authUtils.isAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
-
 function App() {
   const [currentView, setCurrentView] = useState('login'); // 'login', 'register', 'otp', 'dashboard'
   const [accountNumber, setAccountNumber] = useState('');
-  const [otpData, setOtpData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -34,9 +27,8 @@ function App() {
   }, []);
 
   // Handle login success (credentials verified, OTP sent)
-  const handleLoginSuccess = (accNumber, response) => {
+  const handleLoginSuccess = (accNumber) => {
     setAccountNumber(accNumber);
-    setOtpData(response);
     setCurrentView('otp');
   };
 
@@ -47,7 +39,7 @@ function App() {
   };
 
   // Handle OTP verification success
-  const handleVerifySuccess = (response) => {
+  const handleVerifySuccess = () => {
     setIsAuthenticated(true);
     setCurrentView('dashboard');
   };
@@ -56,18 +48,15 @@ function App() {
   const switchToRegister = () => {
     setCurrentView('register');
     setAccountNumber('');
-    setOtpData(null);
   };
 
   const switchToLogin = () => {
     setCurrentView('login');
     setAccountNumber('');
-    setOtpData(null);
   };
 
   const backToLogin = () => {
     setCurrentView('login');
-    setOtpData(null);
   };
 
   // Render current view based on state
@@ -80,7 +69,7 @@ function App() {
             onSwitchToLogin={switchToLogin}
           />
         );
-      
+
       case 'otp':
         return (
           <OtpVerify
@@ -89,10 +78,10 @@ function App() {
             onBack={backToLogin}
           />
         );
-      
+
       case 'dashboard':
         return isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />;
-      
+
       default: // 'login'
         return (
           <Login
@@ -109,32 +98,5 @@ function App() {
     </div>
   );
 }
-
-// Alternative Router-based App (uncomment to use React Router)
-/*
-function AppWithRouter() {
-  return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-otp" element={<OtpVerify />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
-*/
 
 export default App;
