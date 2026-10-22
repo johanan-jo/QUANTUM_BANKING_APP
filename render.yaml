@@ -11,14 +11,14 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: SMTP_EMAIL
+      - key: GMAIL_CLIENT_ID
         sync: false
-      - key: SMTP_PASSWORD
+      - key: GMAIL_CLIENT_SECRET
         sync: false
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: 587
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_SENDER_EMAIL
+        sync: false
       - key: DEBUG_OTP
         value: false
       - key: FLASK_ENV

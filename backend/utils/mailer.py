@@ -1,56 +1,38 @@
-"""SendGrid mailer wrapper.
-
-This module sends transactional emails via SendGrid API.
-
-Environment variables required:
-- SENDGRID_API_KEY: SendGrid API key
-- FROM_EMAIL: sender email address (must be verified in SendGrid)
-
-Local test script `backend/test_sendgrid.py` can be used to validate.
 """
+Email Dispatcher Module for Quantum Banking Application
+
+Dispatches transactional emails (OTP codes and welcome notifications) using
+the official Google Gmail API with OAuth 2.0 refresh-token authentication.
+
+Replaces deprecated/expired SendGrid integration while preserving the existing
+function signatures, HTML styling, and error handling contracts.
+"""
+
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-from typing import Optional
+import logging
+from typing import Optional, Dict, Any, Tuple
+from utils.gmail_service import (
+    send_email_via_gmail,
+    GmailServiceError,
+    _mask_email
+)
 
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL")
+logger = logging.getLogger("quantum_banking.mailer")
 
 
-class SendGridError(Exception):
-    pass
-
-
-def send_email_via_sendgrid(to_email: str, subject: str, html_body: str, plain_body: Optional[str] = None, from_email: Optional[str] = None):
-    """Send an email using SendGrid API.
-
-    Returns status code and response body on success; raises SendGridError on failure.
+def send_otp_email(to_email: str, otp: str) -> bool:
     """
-    api_key = SENDGRID_API_KEY or os.getenv("SENDGRID_API_KEY")
-    sender = from_email or FROM_EMAIL or os.getenv("FROM_EMAIL")
+    Send a Quantum-Inspired OTP email via Gmail API OAuth 2.0.
 
-    if not api_key:
-        raise SendGridError("SendGrid configuration missing: SENDGRID_API_KEY must be set")
-    if not sender:
-        raise SendGridError("FROM_EMAIL must be set in environment variables")
+    Args:
+        to_email: Recipient email address
+        otp: 6-digit OTP code
 
-    try:
-        message = Mail(
-            from_email=sender,
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_body,
-            plain_text_content=plain_body or ""
-        )
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
-        return response.status_code, response.body, response.headers
-    except Exception as e:
-        raise SendGridError(f"SendGrid API error: {e}")
-
-
-def send_otp_email(to_email: str, otp: str):
+    Returns:
+        bool: True if dispatched successfully, False if sending failed.
+    """
     subject = "Quantum Banking - Login OTP"
+    
     html_content = f"""
 <html>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -62,33 +44,59 @@ def send_otp_email(to_email: str, otp: str):
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; margin: 20px 0;">
       <p style="color: #666; margin-bottom: 15px;">Your one-time password for secure login:</p>
       <h1 style="color: #667eea; font-size: 36px; letter-spacing: 8px; margin: 20px 0; font-family: 'Courier New', monospace;">{otp}</h1>
-      <p style="color: #d63384; font-weight: bold;">This OTP will expire in 2 minutes</p>
+      <p style="color: #d63384; font-weight: bold;">This OTP will expire in 5 minutes</p>
     </div>
     <p style="color: #666; text-align: center; font-size: 14px;">If you didn't request this OTP, please ignore this email and ensure your account is secure.</p>
   </div>
   <div style="background: #343a40; padding: 15px; text-align: center;">
-    <p style="color: #adb5bd; margin: 0; font-size: 12px;">© 2025 Quantum Banking. Secure • Reliable • Advanced</p>
+    <p style="color: #adb5bd; margin: 0; font-size: 12px;">© 2026 Quantum Banking. Secure • Reliable • Advanced</p>
   </div>
 </body>
 </html>
 """
 
-    text_content = f"""
-Quantum Banking - Login OTP
+    text_content = f"""Quantum Banking - Login OTP
 
 Your one-time password for secure login: {otp}
 
-This OTP will expire in 2 minutes.
+This OTP will expire in 5 minutes.
 
-If you didn't request this OTP, please ignore this email.
+If you didn't request this OTP, please ignore this email and ensure your account is secure.
 """
 
-    status, body, headers = send_email_via_sendgrid(to_email, subject, html_content, plain_body=text_content)
-    return status, body
+    try:
+        # Note: We do NOT log the actual OTP value for security
+        logger.info("Attempting OTP dispatch to %s via Gmail API", _mask_email(to_email))
+        send_email_via_gmail(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_content,
+            plain_body=text_content
+        )
+        logger.info("OTP successfully sent to %s", _mask_email(to_email))
+        return True
+    except GmailServiceError as gse:
+        logger.error("Gmail API delivery failed for %s: %s", _mask_email(to_email), str(gse))
+        return False
+    except Exception as e:
+        logger.error("Unexpected error delivering OTP to %s: %s", _mask_email(to_email), str(e))
+        return False
 
 
-def send_welcome_email(to_email: str, name: str, account_number: str):
+def send_welcome_email(to_email: str, name: str, account_number: str) -> bool:
+    """
+    Send a welcome onboarding email to newly registered users via Gmail API.
+
+    Args:
+        to_email: Recipient email address
+        name: Full name of the user
+        account_number: Auto-generated 10-digit account number
+
+    Returns:
+        bool: True if dispatched successfully, False if sending failed.
+    """
     subject = "Welcome to Quantum Banking!"
+    
     html_content = f"""
 <html>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -103,15 +111,60 @@ def send_welcome_email(to_email: str, name: str, account_number: str):
       <p><strong>Account Number:</strong> {account_number}</p>
       <p><strong>Email:</strong> {to_email}</p>
     </div>
-    <p style="color: #666;">You can now log in to your account using your account number and password. For security, you'll receive an OTP via email during each login.</p>
+    <p style="color: #666;">You can now log in to your account using your account number and password. For security, you will receive a quantum-inspired OTP via email during each login.</p>
   </div>
   <div style="background: #343a40; padding: 15px; text-align: center;">
-    <p style="color: #adb5bd; margin: 0; font-size: 12px;">© 2025 Quantum Banking. Secure • Reliable • Advanced</p>
+    <p style="color: #adb5bd; margin: 0; font-size: 12px;">© 2026 Quantum Banking. Secure • Reliable • Advanced</p>
   </div>
 </body>
 </html>
 """
 
-    status, body, headers = send_email_via_sendgrid(to_email, subject, html_content)
-    return status, body
+    text_content = f"""Welcome to Quantum Banking, {name}!
 
+Congratulations! Your Quantum Banking account has been successfully created.
+
+Account Details:
+- Account Number: {account_number}
+- Email: {to_email}
+
+You can now log in using your account number and password. For security, you will receive a quantum-inspired OTP via email during each login.
+"""
+
+    try:
+        logger.info("Attempting welcome email dispatch to %s via Gmail API", _mask_email(to_email))
+        send_email_via_gmail(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_content,
+            plain_body=text_content
+        )
+        logger.info("Welcome email successfully sent to %s", _mask_email(to_email))
+        return True
+    except GmailServiceError as gse:
+        logger.error("Gmail API delivery failed for welcome email to %s: %s", _mask_email(to_email), str(gse))
+        return False
+    except Exception as e:
+        logger.error("Unexpected error delivering welcome email to %s: %s", _mask_email(to_email), str(e))
+        return False
+
+
+def send_email_via_sendgrid(*args, **kwargs):
+    """
+    Deprecated: Provided for backward compatibility.
+    Redirects to Gmail API delivery.
+    """
+    to_email = kwargs.get("to_email") or (args[0] if len(args) > 0 else "")
+    subject = kwargs.get("subject") or (args[1] if len(args) > 1 else "")
+    html_body = kwargs.get("html_body") or (args[2] if len(args) > 2 else "")
+    plain_body = kwargs.get("plain_body") or (args[3] if len(args) > 3 else None)
+    from_email = kwargs.get("from_email") or (args[4] if len(args) > 4 else None)
+
+    res = send_email_via_gmail(
+        to_email=to_email,
+        subject=subject,
+        html_body=html_body,
+        plain_body=plain_body,
+        from_email=from_email
+    )
+    return 200, res, {}

@@ -4,6 +4,7 @@ Authentication routes for registration, login, and OTP verification
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 import os
+import logging
 
 from utils.db import (
     get_user_by_account, get_user_by_email, create_user, 
@@ -14,8 +15,10 @@ from utils.security import (
     validate_email, validate_account_number, validate_password
 )
 from utils.mailer import send_otp_email, send_welcome_email
+from utils.gmail_service import _mask_email
 from utils.quantum_otp import generate_otp
 
+logger = logging.getLogger("quantum_banking.auth")
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
@@ -77,16 +80,15 @@ def register():
         
         # Send welcome email (optional, doesn't affect registration success)
         try:
-            print(f"📧 Sending welcome email to {email}...")
+            masked = _mask_email(email)
+            print(f"[INFO] Sending welcome email to {masked}...")
             result = send_welcome_email(email, name, account_number)
             if result:
-                print(f"✅ Welcome email sent successfully to {email}")
+                print(f"[SUCCESS] Welcome email sent successfully to {masked}")
             else:
-                print(f"⚠️ Welcome email function returned False for {email}")
+                print(f"[WARN] Welcome email function returned False for {masked}")
         except Exception as e:
-            import traceback
-            print(f"❌ Failed to send welcome email: {e}")
-            print(f"❌ Traceback: {traceback.format_exc()}")
+            print(f"[ERROR] Failed to send welcome email: {e}")
         
         return jsonify({
             'message': 'Account created successfully',
@@ -162,16 +164,15 @@ def login():
         import threading
         def send_email_wrapper():
             try:
-                print(f"🔄 Background thread started for sending OTP to {user['email']}")
+                masked = _mask_email(user['email'])
+                print(f"[INFO] Background thread started for sending OTP to {masked}")
                 result = send_otp_email(user['email'], otp_code)
                 if result:
-                    print(f"✅ Background email thread completed successfully")
+                    print(f"[SUCCESS] Background email thread completed successfully for {masked}")
                 else:
-                    print(f"⚠️ Background email thread completed but email sending returned False")
+                    print(f"[WARN] Background email thread completed but email sending returned False for {masked}")
             except Exception as e:
-                import traceback
-                print(f"❌ Background email thread error: {str(e)}")
-                print(f"❌ Traceback: {traceback.format_exc()}")
+                print(f"[ERROR] Background email thread error: {str(e)}")
         
         threading.Thread(target=send_email_wrapper).start()
         

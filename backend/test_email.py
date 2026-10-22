@@ -1,40 +1,69 @@
 """
-Test email configuration
+Test email configuration and Gmail API OAuth 2.0 delivery
 """
-from dotenv import load_dotenv
 import os
+import sys
 
-# Load environment variables
+# Ensure UTF-8 output on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+# Ensure backend directory is in sys.path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from dotenv import load_dotenv
+
 load_dotenv()
 
-print("🔍 Email Configuration Check:")
-print("=" * 40)
-print(f"SMTP_HOST: {os.getenv('SMTP_HOST', 'Not set')}")
-print(f"SMTP_PORT: {os.getenv('SMTP_PORT', 'Not set')}")
-print(f"SMTP_EMAIL: {os.getenv('SMTP_EMAIL', 'Not set')}")
-print(f"SMTP_PASSWORD: {'*' * len(os.getenv('SMTP_PASSWORD', '')) if os.getenv('SMTP_PASSWORD') else 'Not set'}")
-print(f"JWT_SECRET: {'*' * len(os.getenv('JWT_SECRET', '')) if os.getenv('JWT_SECRET') else 'Not set'}")
-print("=" * 40)
+def mask_secret(val: str, show_chars: int = 4) -> str:
+    if not val:
+        return "Not set"
+    if len(val) <= show_chars:
+        return "*" * len(val)
+    return val[:show_chars] + "*" * (len(val) - show_chars)
 
-# Test email sending
-if input("\nDo you want to test email sending? (y/n): ").lower() == 'y':
-    test_email = input("Enter test email address: ")
-    
+print("🔍 Quantum Banking - Email Configuration Check (Gmail API OAuth 2.0):")
+print("=" * 60)
+client_id = os.getenv("GMAIL_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID")
+client_secret = os.getenv("GMAIL_CLIENT_SECRET") or os.getenv("GOOGLE_CLIENT_SECRET")
+refresh_token = os.getenv("GMAIL_REFRESH_TOKEN") or os.getenv("GOOGLE_REFRESH_TOKEN")
+sender_email = os.getenv("GMAIL_SENDER_EMAIL") or os.getenv("FROM_EMAIL") or os.getenv("SMTP_EMAIL")
+
+print(f"GMAIL_CLIENT_ID:      {mask_secret(client_id, 8)}")
+print(f"GMAIL_CLIENT_SECRET:  {mask_secret(client_secret, 4)}")
+print(f"GMAIL_REFRESH_TOKEN:  {mask_secret(refresh_token, 6)}")
+print(f"GMAIL_SENDER_EMAIL:   {sender_email or 'Not set'}")
+print("=" * 60)
+
+if not client_id or not client_secret or not refresh_token:
+    print("⚠️ Missing OAuth 2.0 credentials in environment.")
+    print("Run `python scripts/get_refresh_token.py` to generate tokens.")
+    print("Then populate GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN.")
+    sys.exit(0)
+
+# Optional test email sending
+user_choice = input("\nDo you want to test email sending? (y/n): ").strip().lower()
+if user_choice == "y":
+    test_email = input("Enter recipient test email address: ").strip()
+    if not test_email:
+        print("❌ No recipient address entered. Aborting test.")
+        sys.exit(1)
+        
     try:
         from utils.mailer import send_otp_email
         print(f"\n📧 Sending test OTP to {test_email}...")
         
-        if send_otp_email(test_email, "123456"):
-            print("✅ Email sent successfully!")
+        # Test with a dummy OTP
+        success = send_otp_email(test_email, "987654")
+        if success:
+            print("✅ Email sent successfully via Gmail API!")
         else:
-            print("❌ Failed to send email. Check your SMTP configuration.")
+            print("❌ Failed to send email. Check error logs and OAuth token validity.")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error during test: {e}")
 else:
     print("\nEmail test skipped.")
-    
-print("\n📋 Next steps:")
-print("1. Configure your Gmail/email settings in .env")
-print("2. Make sure 2FA is enabled and app password is generated")
-print("3. Test email sending before using the app")
